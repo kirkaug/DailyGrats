@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DailyGrats</string>
+    <string name="title_activity_main">DailyGrats</string>
+    <string name="package_name">com.dailygrats.app</string>
+    <string name="custom_url_scheme">com.dailygrats.app</string>
+</resources>

@@ -1,0 +1,84 @@
+<div class="entry-detail-container">
+  <header class="detail-header">
+    <button class="back-btn" (click)="cancel()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+    </button>
+    <h2>{{ isNew ? 'New Entry' : 'Edit Entry' }}</h2>
+    <button *ngIf="!isNew" class="delete-btn" (click)="deleteEntry()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </button>
+  </header>
+
+  <div class="entry-form">
+    <div class="form-group">
+      <label for="content">What are you grateful for today?</label>
+      <textarea
+        id="content"
+        [(ngModel)]="content"
+        placeholder="Write about the things, people, or moments that brought you joy..."
+        rows="10"
+      ></textarea>
+    </div>
+
+    <div class="photo-section">
+      <div *ngIf="photoUrl" class="photo-preview">
+        <img [src]="photoUrl" alt="Entry photo" />
+        <button class="remove-photo-btn" (click)="removePhoto()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="photo-actions">
+        <button class="add-photo-btn" (click)="togglePhotoOptions()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          {{ photoUrl ? 'Change Photo' : 'Add Photo' }}
+        </button>
+
+        <div *ngIf="showPhotoOptions" class="photo-options">
+          <button (click)="takePhoto()">Take Photo</button>
+          <button (click)="selectPhoto()">Choose from Gallery</button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="entry && !isNew && aiReflectionEnabled" class="ai-reflection-section">
+      <h3>AI Reflection</h3>
+      <div *ngIf="entry.aiReflection" class="reflection-content">
+        <p>{{ entry.aiReflection }}</p>
+      </div>
+      <div *ngIf="!entry.aiReflection" class="no-reflection">
+        <p>Get an AI-powered reflection on your gratitude entry.</p>
+      </div>
+      <button
+        class="generate-reflection-btn"
+        (click)="generateReflection()"
+        [disabled]="isGeneratingReflection || !content.trim()"
+      >
+        <span *ngIf="!isGeneratingReflection">
+          {{ entry.aiReflection ? 'Regenerate Reflection' : 'Generate Reflection' }}
+        </span>
+        <span *ngIf="isGeneratingReflection">Generating...</span>
+      </button>
+    </div>
+
+    <div class="action-buttons">
+      <button class="cancel-btn" (click)="cancel()">Cancel</button>
+      <button class="save-btn" (click)="save()" [disabled]="!content.trim()">
+        Save Entry
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,126 @@
+<div class="settings-container">
+  <header class="settings-header">
+    <button class="back-btn" (click)="goBack()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+    </button>
+    <h1>Settings</h1>
+    <div class="spacer"></div>
+  </header>
+
+  <div class="settings-content">
+    <section class="settings-section">
+      <h2>Daily Reminders</h2>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Enable Reminders</div>
+          <div class="setting-description">Get daily notifications to write your gratitude entry</div>
+        </div>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            [checked]="settings.notifications.enabled"
+            (change)="toggleNotifications()"
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div *ngIf="settings.notifications.enabled" class="subsettings">
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Reminder Time</div>
+          </div>
+          <input
+            type="time"
+            class="time-input"
+            [value]="settings.notifications.time"
+            (change)="updateNotificationTime($event)"
+          />
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Reminder Days</div>
+          </div>
+          <div class="days-selector">
+            <button
+              *ngFor="let day of daysOfWeek"
+              class="day-btn"
+              [class.selected]="isDaySelected(day.value)"
+              (click)="toggleDay(day.value)"
+            >
+              {{ day.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>AI Reflection</h2>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Enable AI Reflection</div>
+          <div class="setting-description">Get AI-powered insights on your gratitude entries</div>
+        </div>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            [checked]="settings.aiReflectionEnabled"
+            (change)="toggleAiReflection()"
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="info-box">
+        <p>AI reflections provide thoughtful, encouraging insights on your gratitude entries. This feature works offline with built-in responses, or you can configure it to use your own AI API for personalized reflections.</p>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>Appearance</h2>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Theme</div>
+        </div>
+        <div class="theme-selector">
+          <button
+            class="theme-btn"
+            [class.selected]="settings.theme === 'light'"
+            (click)="updateTheme('light')"
+          >
+            Light
+          </button>
+          <button
+            class="theme-btn"
+            [class.selected]="settings.theme === 'dark'"
+            (click)="updateTheme('dark')"
+          >
+            Dark
+          </button>
+          <button
+            class="theme-btn"
+            [class.selected]="settings.theme === 'auto'"
+            (click)="updateTheme('auto')"
+          >
+            Auto
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section app-info">
+      <h2>About</h2>
+      <p class="app-name">DailyGrats</p>
+      <p class="app-version">Version 1.0.0</p>
+      <p class="app-description">A simple, beautiful gratitude journal to help you cultivate mindfulness and appreciation in your daily life.</p>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+<div class="entry-list-container">
+  <header class="app-header">
+    <h1>DailyGrats</h1>
+    <button class="settings-btn" routerLink="/settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 1v6m0 6v6m5.2-13.2l-1.4 1.4M8.2 15.8l-1.4 1.4M23 12h-6m-6 0H5m13.2 5.2l-1.4-1.4M8.2 8.2L6.8 6.8"></path>
+      </svg>
+    </button>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading...</div>
+
+  <div *ngIf="!loading && entries.length === 0" class="empty-state">
+    <div class="empty-icon">📝</div>
+    <h2>Start Your Gratitude Journey</h2>
+    <p>Begin by writing your first entry. Take a moment to reflect on what you're grateful for today.</p>
+  </div>
+
+  <div *ngIf="!loading && entries.length > 0" class="entries-grid">
+    <div *ngFor="let entry of entries" class="entry-card" (click)="viewEntry(entry)">
+      <div class="entry-date">{{ formatDate(entry.date) }}</div>
+      <div class="entry-content">
+        <p>{{ getPreview(entry.content) }}</p>
+      </div>
+      <div *ngIf="entry.photoUrl" class="entry-has-photo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </div>
+      <div *ngIf="entry.aiReflection" class="entry-has-reflection">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab" (click)="createEntry()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+</div>
