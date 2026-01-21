@@ -37,6 +37,16 @@ export class StorageService {
     }
   }
 
+  async keys(): Promise<string[] | null> {
+    try {
+      const { keys } = await Preferences.keys();
+      return keys;
+    } catch (error) {
+      console.error('Error getting keys from storage:', error);
+      return null;
+    }
+  }
+
   async clear(): Promise<void> {
     try {
       await Preferences.clear();

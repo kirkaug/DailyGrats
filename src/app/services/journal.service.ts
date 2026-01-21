@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { JournalEntry } from '../models/journal-entry.model';
 import { StorageService } from './storage.service';
 
-const ENTRIES_KEY = 'journal_entries';
+const ENTRY_KEY_PREFIX = 'entry_';
 
 @Injectable({
   providedIn: 'root'
@@ -17,22 +17,26 @@ export class JournalService {
   }
 
   private async loadEntries(): Promise<void> {
-    const entries = await this.storageService.get<JournalEntry[]>(ENTRIES_KEY);
-    if (entries) {
-      // Convert date strings back to Date objects
-      const parsedEntries = entries.map(entry => ({
-        ...entry,
-        date: new Date(entry.date),
-        createdAt: new Date(entry.createdAt),
-        updatedAt: new Date(entry.updatedAt)
-      }));
-      this.entriesSubject.next(parsedEntries);
+    const keys = await this.storageService.keys();
+    if (!keys) {
+      return;
     }
-  }
-
-  private async saveEntries(entries: JournalEntry[]): Promise<void> {
-    await this.storageService.set(ENTRIES_KEY, entries);
-    this.entriesSubject.next(entries);
+    const entryKeys = keys.filter(k => k.startsWith(ENTRY_KEY_PREFIX));
+    const entries: JournalEntry[] = [];
+    for (const key of entryKeys) {
+      const entry = await this.storageService.get<JournalEntry>(key);
+      if (entry) {
+        // Convert date strings back to Date objects
+        const parsedEntry = {
+          ...entry,
+          date: new Date(entry.date),
+          createdAt: new Date(entry.createdAt),
+          updatedAt: new Date(entry.updatedAt)
+        };
+        entries.push(parsedEntry);
+      }
+    }
+    this.entriesSubject.next(entries.sort((a, b) => b.date.getTime() - a.date.getTime()));
   }
 
   async getEntries(): Promise<JournalEntry[]> {
@@ -51,7 +55,6 @@ export class JournalService {
   }
 
   async createEntry(content: string, photoUrl?: string): Promise<JournalEntry> {
-    const entries = this.entriesSubject.value;
     const now = new Date();
     const entry: JournalEntry = {
       id: this.generateId(),
@@ -62,11 +65,12 @@ export class JournalService {
       updatedAt: now
     };
 
-    const updatedEntries = [...entries, entry].sort((a, b) =>
+    await this.storageService.set(`${ENTRY_KEY_PREFIX}${entry.id}`, entry);
+    const currentEntries = this.entriesSubject.value;
+    const updatedEntries = [...currentEntries, entry].sort((a, b) =>
       b.date.getTime() - a.date.getTime()
     );
-
-    await this.saveEntries(updatedEntries);
+    this.entriesSubject.next(updatedEntries);
     return entry;
   }
 
@@ -84,10 +88,10 @@ export class JournalService {
       updatedAt: new Date()
     };
 
+    await this.storageService.set(`${ENTRY_KEY_PREFIX}${id}`, updatedEntry);
     const updatedEntries = [...entries];
     updatedEntries[index] = updatedEntry;
-
-    await this.saveEntries(updatedEntries);
+    this.entriesSubject.next(updatedEntries);
     return updatedEntry;
   }
 
@@ -99,7 +103,8 @@ export class JournalService {
       return false;
     }
 
-    await this.saveEntries(filteredEntries);
+    await this.storageService.remove(`${ENTRY_KEY_PREFIX}${id}`);
+    this.entriesSubject.next(filteredEntries);
     return true;
   }
 

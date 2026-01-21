@@ -22,8 +22,8 @@
         <label class="toggle-switch">
           <input
             type="checkbox"
-            [checked]="settings.notifications.enabled"
-            (change)="toggleNotifications()"
+            [(ngModel)]="settings.notifications.enabled"
+            (ngModelChange)="toggleNotifications()"
           />
           <span class="slider"></span>
         </label>

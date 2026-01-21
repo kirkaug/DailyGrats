@@ -48,19 +48,17 @@ export class SettingsComponent implements OnInit {
   }
 
   async toggleNotifications(): Promise<void> {
-    if (!this.settings.notifications.enabled) {
-      // Enabling notifications
+    if (this.settings.notifications.enabled) {
+      // Enabling notifications - check permissions
       if (!this.permissionGranted) {
         this.permissionGranted = await this.notificationService.requestPermissions();
         if (!this.permissionGranted) {
           alert('Notification permissions are required to enable reminders.');
+          // Revert the toggle since permission was denied
+          this.settings.notifications.enabled = false;
           return;
         }
       }
-      this.settings.notifications.enabled = true;
-    } else {
-      // Disabling notifications
-      this.settings.notifications.enabled = false;
     }
 
     await this.saveSettings();
