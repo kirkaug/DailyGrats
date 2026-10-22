@@ -2,6 +2,7 @@
 
 :root,
 [data-theme='light'] {
+  color-scheme: light;
   --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --surface-bg: #ffffff;
   --surface-subtle-bg: #f8f9ff;
@@ -18,6 +19,7 @@
 }
 
 [data-theme='dark'] {
+  color-scheme: dark;
   --bg-gradient: linear-gradient(135deg, #1a1c2e 0%, #2d1b4e 100%);
   --surface-bg: #25283d;
   --surface-subtle-bg: #1e2132;

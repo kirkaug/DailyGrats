@@ -164,21 +164,26 @@
 }
 
 .days-selector {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
 }
 
 .day-btn {
-  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
   border: 2px solid var(--border-color);
   background: var(--surface-bg);
-  border-radius: 20px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  transition: all 0.3s ease;
+  text-align: center;
+  transition: all 0.2s ease;
 
   &:hover {
     border-color: var(--accent-color);
@@ -271,10 +276,5 @@
 @media (max-width: 768px) {
   .settings-content {
     padding: 12px;
-  }
-
-  .day-btn {
-    flex: 1;
-    min-width: calc(14.28% - 8px);
   }
 }
