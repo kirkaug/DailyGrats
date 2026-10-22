@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -21,6 +21,8 @@ export class SettingsComponent implements OnInit {
       days: [0, 1, 2, 3, 4, 5, 6]
     },
     aiReflectionEnabled: true,
+    aiApiEndpoint: '',
+    aiApiKey: '',
     theme: 'auto'
   };
 
@@ -39,12 +41,14 @@ export class SettingsComponent implements OnInit {
   constructor(
     private settingsService: SettingsService,
     private notificationService: NotificationService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit(): Promise<void> {
     this.settings = await this.settingsService.getSettings();
     this.permissionGranted = await this.notificationService.checkPermissions();
+    this.cdr.markForCheck();
   }
 
   async toggleNotifications(): Promise<void> {
@@ -56,12 +60,14 @@ export class SettingsComponent implements OnInit {
           alert('Notification permissions are required to enable reminders.');
           // Revert the toggle since permission was denied
           this.settings.notifications.enabled = false;
+          this.cdr.markForCheck();
           return;
         }
       }
     }
 
     await this.saveSettings();
+    this.cdr.markForCheck();
   }
 
   async updateNotificationTime(event: Event): Promise<void> {
@@ -95,6 +101,10 @@ export class SettingsComponent implements OnInit {
 
   async toggleAiReflection(): Promise<void> {
     this.settings.aiReflectionEnabled = !this.settings.aiReflectionEnabled;
+    await this.saveSettings();
+  }
+
+  async updateAiConfig(): Promise<void> {
     await this.saveSettings();
   }
 

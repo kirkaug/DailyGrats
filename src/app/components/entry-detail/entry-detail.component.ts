@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -20,6 +20,7 @@ export class EntryDetailComponent implements OnInit {
   isNew = false;
   content = '';
   photoUrl?: string;
+  aiReflection?: string;
   isGeneratingReflection = false;
   showPhotoOptions = false;
   aiReflectionEnabled = true;
@@ -30,7 +31,8 @@ export class EntryDetailComponent implements OnInit {
     private journalService: JournalService,
     private photoService: PhotoService,
     private aiReflectionService: AiReflectionService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -47,10 +49,14 @@ export class EntryDetailComponent implements OnInit {
       if (this.entry) {
         this.content = this.entry.content;
         this.photoUrl = this.entry.photoUrl;
+        this.aiReflection = this.entry.aiReflection;
       } else {
         this.router.navigate(['/']);
+        return;
       }
     }
+
+    this.cdr.markForCheck();
   }
 
   async save(): Promise<void> {
@@ -60,11 +66,16 @@ export class EntryDetailComponent implements OnInit {
 
     try {
       if (this.isNew) {
-        this.entry = await this.journalService.createEntry(this.content, this.photoUrl);
+        this.entry = await this.journalService.createEntry(
+          this.content,
+          this.photoUrl,
+          this.aiReflection
+        );
       } else if (this.entry) {
         await this.journalService.updateEntry(this.entry.id, {
           content: this.content,
-          photoUrl: this.photoUrl
+          photoUrl: this.photoUrl,
+          aiReflection: this.aiReflection
         });
       }
 
@@ -80,6 +91,7 @@ export class EntryDetailComponent implements OnInit {
     const photo = await this.photoService.takePhoto();
     if (photo) {
       this.photoUrl = photo;
+      this.cdr.markForCheck();
     }
   }
 
@@ -88,6 +100,7 @@ export class EntryDetailComponent implements OnInit {
     const photo = await this.photoService.selectPhoto();
     if (photo) {
       this.photoUrl = photo;
+      this.cdr.markForCheck();
     }
   }
 
@@ -100,29 +113,37 @@ export class EntryDetailComponent implements OnInit {
   }
 
   async generateReflection(): Promise<void> {
-    if (!this.entry || !this.content.trim()) {
+    if (!this.content.trim()) {
       return;
     }
 
     this.isGeneratingReflection = true;
+    this.cdr.markForCheck();
 
     try {
       const reflection = await this.aiReflectionService.generateReflection(this.content);
-      const updatedEntry = await this.journalService.addAiReflection(this.entry.id, reflection);
-      if (updatedEntry) {
-        this.entry = updatedEntry;
+      this.aiReflection = reflection;
+      if (!this.isNew && this.entry) {
+        const updatedEntry = await this.journalService.addAiReflection(this.entry.id, reflection);
+        if (updatedEntry) {
+          this.entry = updatedEntry;
+        }
       }
     } catch (error) {
       console.error('Error generating reflection:', error);
       alert('Failed to generate AI reflection. Using offline mode.');
       // Fallback to mock reflection
-      const reflection = await this.aiReflectionService.generateReflection(this.content);
-      const updatedEntry = await this.journalService.addAiReflection(this.entry.id, reflection);
-      if (updatedEntry) {
-        this.entry = updatedEntry;
+      const reflection = this.aiReflectionService.generateMockReflection(this.content);
+      this.aiReflection = reflection;
+      if (!this.isNew && this.entry) {
+        const updatedEntry = await this.journalService.addAiReflection(this.entry.id, reflection);
+        if (updatedEntry) {
+          this.entry = updatedEntry;
+        }
       }
     } finally {
       this.isGeneratingReflection = false;
+      this.cdr.markForCheck();
     }
   }
 

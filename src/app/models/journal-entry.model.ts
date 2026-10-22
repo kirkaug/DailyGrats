@@ -17,5 +17,7 @@ export interface NotificationSettings {
 export interface AppSettings {
   notifications: NotificationSettings;
   aiReflectionEnabled: boolean;
+  aiApiEndpoint?: string;
+  aiApiKey?: string;
   theme: 'light' | 'dark' | 'auto';
 }

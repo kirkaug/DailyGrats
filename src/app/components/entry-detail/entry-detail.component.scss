@@ -1,6 +1,6 @@
 .entry-detail-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-gradient);
 }
 
 .detail-header {
@@ -26,17 +26,15 @@
     padding: 10px;
     cursor: pointer;
     color: white;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease;
 
     &:hover {
       background: rgba(255, 255, 255, 0.3);
     }
   }
 
-  .delete-btn {
-    &:hover {
-      background: rgba(255, 50, 50, 0.5);
-    }
+  .delete-btn:hover {
+    background: rgba(255, 50, 50, 0.5);
   }
 }
 
@@ -63,9 +61,10 @@
     border: none;
     border-radius: 16px;
     font-size: 16px;
-    font-family: inherit;
     line-height: 1.6;
     resize: vertical;
+    background: var(--surface-bg);
+    color: var(--text-primary);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
     &:focus {
@@ -105,10 +104,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      transition: transform 0.3s ease, background 0.3s ease;
 
       &:hover {
-        background: rgba(255, 0, 0, 1);
+        background: red;
         transform: scale(1.1);
       }
     }
@@ -118,18 +117,18 @@
     position: relative;
 
     .add-photo-btn {
-      background: white;
+      background: var(--surface-bg);
       border: none;
       border-radius: 12px;
       padding: 12px 20px;
       cursor: pointer;
       font-size: 16px;
       font-weight: 600;
-      color: #667eea;
+      color: var(--accent-color);
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
       &:hover {
@@ -143,7 +142,7 @@
       top: 100%;
       left: 0;
       margin-top: 8px;
-      background: white;
+      background: var(--surface-bg);
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       overflow: hidden;
@@ -154,18 +153,18 @@
         width: 100%;
         padding: 12px 20px;
         border: none;
-        background: white;
+        background: var(--surface-bg);
+        color: var(--text-primary);
         cursor: pointer;
         font-size: 16px;
         text-align: left;
-        transition: background 0.2s ease;
 
         &:hover {
-          background: #f5f5f5;
+          background: var(--surface-hover-bg);
         }
 
         &:not(:last-child) {
-          border-bottom: 1px solid #e0e0e0;
+          border-bottom: 1px solid var(--border-color);
         }
       }
     }
@@ -173,7 +172,7 @@
 }
 
 .ai-reflection-section {
-  background: white;
+  background: var(--surface-bg);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
@@ -181,12 +180,12 @@
 
   h3 {
     margin: 0 0 16px 0;
-    color: #667eea;
+    color: var(--accent-color);
     font-size: 20px;
   }
 
   .reflection-content {
-    background: #f8f9ff;
+    background: var(--surface-subtle-bg);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
@@ -194,18 +193,14 @@
     p {
       margin: 0;
       line-height: 1.6;
-      color: #333;
+      color: var(--text-primary);
     }
   }
 
   .no-reflection {
     text-align: center;
     padding: 20px;
-    color: #666;
-
-    p {
-      margin: 0;
-    }
+    color: var(--text-secondary);
   }
 
   .generate-reflection-btn {
@@ -218,7 +213,7 @@
     font-size: 16px;
     font-weight: 600;
     color: white;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
@@ -245,32 +240,19 @@
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    background: var(--surface-bg);
+    color: var(--accent-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 
-    &.cancel-btn {
-      background: white;
-      color: #667eea;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-      }
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
 
-    &.save-btn {
-      background: white;
-      color: #667eea;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-
-      &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }

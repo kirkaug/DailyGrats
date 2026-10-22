@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { JournalService } from '../../services/journal.service';
@@ -17,7 +17,8 @@ export class EntryListComponent implements OnInit {
 
   constructor(
     private journalService: JournalService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -28,6 +29,7 @@ export class EntryListComponent implements OnInit {
     this.journalService.entries$.subscribe(entries => {
       this.entries = entries;
       this.loading = false;
+      this.cdr.markForCheck();
     });
   }
 

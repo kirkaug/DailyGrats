@@ -21,30 +21,19 @@ export class NotificationService {
   async scheduleNotifications(): Promise<void> {
     const settings = await this.settingsService.getSettings();
 
+    // Always cancel existing notifications before scheduling new ones
+    await this.cancelNotifications();
+
     if (!settings.notifications.enabled) {
-      await this.cancelNotifications();
       return;
     }
-
-    // Cancel existing notifications
-    await this.cancelNotifications();
 
     const [hours, minutes] = settings.notifications.time.split(':').map(Number);
 
     // Schedule notifications for each enabled day
     const notifications = settings.notifications.days.map((day, index) => {
-      const schedule = new Date();
-      schedule.setHours(hours, minutes, 0, 0);
-
-      // If the time has passed today, start from tomorrow
-      if (schedule <= new Date()) {
-        schedule.setDate(schedule.getDate() + 1);
-      }
-
-      // Adjust to the correct day of the week
-      while (schedule.getDay() !== day) {
-        schedule.setDate(schedule.getDate() + 1);
-      }
+      // Capacitor's weekday is 1-7 (Sun-Sat), while our setting is 0-6
+      const weekday = day + 1;
 
       return {
         id: this.NOTIFICATION_ID + index,
@@ -52,12 +41,13 @@ export class NotificationService {
         body: 'Take a moment to reflect on what you\'re grateful for today.',
         schedule: {
           on: {
+            weekday: weekday,
             hour: hours,
-            minute: minutes
+            minute: minutes,
           },
           repeats: true,
-          allowWhileIdle: true
-        }
+          allowWhileIdle: true,
+        },
       };
     });
 

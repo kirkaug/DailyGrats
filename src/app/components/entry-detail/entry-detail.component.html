@@ -54,12 +54,12 @@
       </div>
     </div>
 
-    <div *ngIf="entry && !isNew && aiReflectionEnabled" class="ai-reflection-section">
+    <div *ngIf="aiReflectionEnabled" class="ai-reflection-section">
       <h3>AI Reflection</h3>
-      <div *ngIf="entry.aiReflection" class="reflection-content">
-        <p>{{ entry.aiReflection }}</p>
+      <div *ngIf="aiReflection" class="reflection-content">
+        <p>{{ aiReflection }}</p>
       </div>
-      <div *ngIf="!entry.aiReflection" class="no-reflection">
+      <div *ngIf="!aiReflection" class="no-reflection">
         <p>Get an AI-powered reflection on your gratitude entry.</p>
       </div>
       <button
@@ -68,7 +68,7 @@
         [disabled]="isGeneratingReflection || !content.trim()"
       >
         <span *ngIf="!isGeneratingReflection">
-          {{ entry.aiReflection ? 'Regenerate Reflection' : 'Generate Reflection' }}
+          {{ aiReflection ? 'Regenerate Reflection' : 'Generate Reflection' }}
         </span>
         <span *ngIf="isGeneratingReflection">Generating...</span>
       </button>

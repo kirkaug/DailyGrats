@@ -1,6 +1,6 @@
 .settings-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-gradient);
 }
 
 .settings-header {
@@ -43,7 +43,7 @@
 }
 
 .settings-section {
-  background: white;
+  background: var(--surface-bg);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 20px;
@@ -51,7 +51,7 @@
 
   h2 {
     margin: 0 0 20px 0;
-    color: #667eea;
+    color: var(--accent-color);
     font-size: 20px;
     font-weight: 600;
   }
@@ -62,9 +62,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 0;
+  gap: 12px;
+
+  &.setting-item-stacked {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
   &:not(:last-child) {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--divider-color);
   }
 
   .setting-info {
@@ -73,13 +79,13 @@
     .setting-label {
       font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: var(--text-primary);
       margin-bottom: 4px;
     }
 
     .setting-description {
       font-size: 14px;
-      color: #666;
+      color: var(--text-secondary);
       line-height: 1.4;
     }
   }
@@ -113,7 +119,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: var(--toggle-off-bg);
     transition: 0.3s;
     border-radius: 28px;
 
@@ -134,21 +140,27 @@
 .subsettings {
   margin-top: 16px;
   padding-left: 16px;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--accent-color);
 }
 
-.time-input {
+.time-input,
+.text-input {
   padding: 8px 12px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 16px;
-  color: #333;
+  background: var(--surface-subtle-bg);
+  color: var(--text-primary);
   transition: border-color 0.3s ease;
 
   &:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--accent-color);
   }
+}
+
+.text-input {
+  width: 100%;
 }
 
 .days-selector {
@@ -159,18 +171,18 @@
 
 .day-btn {
   padding: 8px 16px;
-  border: 2px solid #e0e0e0;
-  background: white;
+  border: 2px solid var(--border-color);
+  background: var(--surface-bg);
   border-radius: 20px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: var(--accent-color);
+    color: var(--accent-color);
   }
 
   &.selected {
@@ -183,15 +195,15 @@
 .info-box {
   margin-top: 16px;
   padding: 16px;
-  background: #f8f9ff;
+  background: var(--surface-subtle-bg);
   border-radius: 12px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--accent-color);
 
   p {
     margin: 0;
     font-size: 14px;
     line-height: 1.6;
-    color: #666;
+    color: var(--text-secondary);
   }
 }
 
@@ -203,18 +215,18 @@
 .theme-btn {
   flex: 1;
   padding: 10px 16px;
-  border: 2px solid #e0e0e0;
-  background: white;
+  border: 2px solid var(--border-color);
+  background: var(--surface-bg);
   border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: var(--accent-color);
+    color: var(--accent-color);
   }
 
   &.selected {
@@ -230,20 +242,20 @@
   .app-name {
     font-size: 24px;
     font-weight: 700;
-    color: #667eea;
+    color: var(--accent-color);
     margin: 0 0 8px 0;
   }
 
   .app-version {
     font-size: 14px;
-    color: #999;
+    color: var(--text-muted);
     margin: 0 0 16px 0;
   }
 
   .app-description {
     font-size: 14px;
     line-height: 1.6;
-    color: #666;
+    color: var(--text-secondary);
     margin: 0;
   }
 }

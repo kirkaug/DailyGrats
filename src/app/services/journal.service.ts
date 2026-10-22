@@ -11,9 +11,10 @@ const ENTRY_KEY_PREFIX = 'entry_';
 export class JournalService {
   private entriesSubject = new BehaviorSubject<JournalEntry[]>([]);
   public entries$: Observable<JournalEntry[]> = this.entriesSubject.asObservable();
+  private initializedPromise: Promise<void>;
 
   constructor(private storageService: StorageService) {
-    this.loadEntries();
+    this.initializedPromise = this.loadEntries();
   }
 
   private async loadEntries(): Promise<void> {
@@ -40,27 +41,32 @@ export class JournalService {
   }
 
   async getEntries(): Promise<JournalEntry[]> {
+    await this.initializedPromise;
     return this.entriesSubject.value;
   }
 
   async getEntryById(id: string): Promise<JournalEntry | undefined> {
+    await this.initializedPromise;
     const entries = this.entriesSubject.value;
     return entries.find(entry => entry.id === id);
   }
 
   async getEntryByDate(date: Date): Promise<JournalEntry | undefined> {
+    await this.initializedPromise;
     const entries = this.entriesSubject.value;
     const dateStr = this.formatDate(date);
     return entries.find(entry => this.formatDate(entry.date) === dateStr);
   }
 
-  async createEntry(content: string, photoUrl?: string): Promise<JournalEntry> {
+  async createEntry(content: string, photoUrl?: string, aiReflection?: string): Promise<JournalEntry> {
+    await this.initializedPromise;
     const now = new Date();
     const entry: JournalEntry = {
       id: this.generateId(),
       date: now,
       content,
       photoUrl,
+      aiReflection,
       createdAt: now,
       updatedAt: now
     };
@@ -75,6 +81,7 @@ export class JournalService {
   }
 
   async updateEntry(id: string, updates: Partial<JournalEntry>): Promise<JournalEntry | null> {
+    await this.initializedPromise;
     const entries = this.entriesSubject.value;
     const index = entries.findIndex(entry => entry.id === id);
 
@@ -96,6 +103,7 @@ export class JournalService {
   }
 
   async deleteEntry(id: string): Promise<boolean> {
+    await this.initializedPromise;
     const entries = this.entriesSubject.value;
     const filteredEntries = entries.filter(entry => entry.id !== id);
 

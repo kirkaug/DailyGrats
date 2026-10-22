@@ -12,6 +12,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     days: [0, 1, 2, 3, 4, 5, 6] // All days
   },
   aiReflectionEnabled: true,
+  aiApiEndpoint: '',
+  aiApiKey: '',
   theme: 'auto'
 };
 
@@ -21,26 +23,48 @@ const DEFAULT_SETTINGS: AppSettings = {
 export class SettingsService {
   private settingsSubject = new BehaviorSubject<AppSettings>(DEFAULT_SETTINGS);
   public settings$: Observable<AppSettings> = this.settingsSubject.asObservable();
+  private initializedPromise: Promise<void>;
+  private mediaQuery?: MediaQueryList;
 
   constructor(private storageService: StorageService) {
-    this.loadSettings();
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      this.mediaQuery.addEventListener?.('change', () => {
+        if (this.settingsSubject.value.theme === 'auto') {
+          this.applyTheme('auto');
+        }
+      });
+    }
+    this.initializedPromise = this.loadSettings();
   }
 
   private async loadSettings(): Promise<void> {
     const settings = await this.storageService.get<AppSettings>(SETTINGS_KEY);
     if (settings) {
-      this.settingsSubject.next(settings);
+      const merged: AppSettings = {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        notifications: {
+          ...DEFAULT_SETTINGS.notifications,
+          ...(settings.notifications || {})
+        }
+      };
+      this.settingsSubject.next(merged);
+      this.applyTheme(merged.theme);
     } else {
       // Save default settings
       await this.saveSettings(DEFAULT_SETTINGS);
+      this.applyTheme(DEFAULT_SETTINGS.theme);
     }
   }
 
   async getSettings(): Promise<AppSettings> {
+    await this.initializedPromise;
     return this.settingsSubject.value;
   }
 
   async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
+    await this.initializedPromise;
     const currentSettings = this.settingsSubject.value;
     const newSettings = {
       ...currentSettings,
@@ -52,7 +76,17 @@ export class SettingsService {
     };
 
     await this.saveSettings(newSettings);
+    this.applyTheme(newSettings.theme);
     return newSettings;
+  }
+
+  applyTheme(theme: 'light' | 'dark' | 'auto'): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const prefersDark = this.mediaQuery?.matches ?? false;
+    const effectiveTheme = theme === 'auto' ? (prefersDark ? 'dark' : 'light') : theme;
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
   }
 
   private async saveSettings(settings: AppSettings): Promise<void> {

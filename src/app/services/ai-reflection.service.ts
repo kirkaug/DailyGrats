@@ -1,51 +1,126 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { SettingsService } from './settings.service';
+
+export const DEFAULT_GEMINI_ENDPOINT =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AiReflectionService {
-  // This can be configured to use different AI services
-  // For now, we'll create a structure that can work with various APIs
-  private apiEndpoint = ''; // To be configured by user
-  private apiKey = ''; // To be configured by user
+  private apiEndpoint = '';
+  private apiKey = '';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private settingsService: SettingsService
+  ) {
+    this.settingsService.settings$.subscribe(settings => {
+      if (settings.aiApiEndpoint !== undefined) {
+        this.apiEndpoint = settings.aiApiEndpoint.trim();
+      }
+      if (settings.aiApiKey !== undefined) {
+        this.apiKey = settings.aiApiKey.trim();
+      }
+    });
+  }
 
   setApiConfig(endpoint: string, apiKey: string): void {
-    this.apiEndpoint = endpoint;
-    this.apiKey = apiKey;
+    this.apiEndpoint = endpoint.trim();
+    this.apiKey = apiKey.trim();
   }
 
   async generateReflection(content: string): Promise<string> {
-    if (!this.apiEndpoint || !this.apiKey) {
+    const settings = await this.settingsService.getSettings();
+    const apiKey = this.apiKey || settings.aiApiKey?.trim() || '';
+    let endpoint =
+      this.apiEndpoint ||
+      settings.aiApiEndpoint?.trim() ||
+      (apiKey ? DEFAULT_GEMINI_ENDPOINT : '');
+
+    if (!endpoint || !apiKey) {
       // Return a mock reflection if API is not configured
       return this.generateMockReflection(content);
     }
 
+    // Automatically upgrade retired gemini-2.5-flash model URLs to gemini-3.5-flash
+    if (endpoint.includes('models/gemini-2.5-flash')) {
+      endpoint = endpoint.replace('models/gemini-2.5-flash', 'models/gemini-3.5-flash');
+    }
+
+    const prompt = this.buildPrompt(content);
+
     try {
+      if (this.isGeminiEndpoint(endpoint)) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const urlWithKey = endpoint.includes('key=')
+          ? endpoint
+          : `${endpoint}${separator}key=${encodeURIComponent(apiKey)}`;
+
+        const response = await firstValueFrom(
+          this.http.post<{
+            candidates?: Array<{
+              content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+            }>;
+          }>(
+            urlWithKey,
+            {
+              contents: [{ parts: [{ text: prompt }] }]
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+        );
+
+        const parts = response.candidates?.[0]?.content?.parts || [];
+        const textPart = parts.find(p => !p.thought && p.text) || parts[0];
+        const text = textPart?.text?.trim();
+        if (!text) {
+          throw new Error('Empty response from Gemini API.');
+        }
+        return text;
+      }
+
       const response = await firstValueFrom(
-        this.http.post<{ reflection: string }>(
-          this.apiEndpoint,
+        this.http.post<{
+          reflection?: string;
+          choices?: Array<{ message?: { content?: string } }>;
+        }>(
+          endpoint,
           {
-            prompt: this.buildPrompt(content),
+            prompt,
             max_tokens: 200
           },
           {
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
+              'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json'
             }
           }
         )
       );
 
-      return response.reflection;
+      return (
+        response.reflection ||
+        response.choices?.[0]?.message?.content?.trim() ||
+        this.generateMockReflection(content)
+      );
     } catch (error) {
       console.error('Error generating AI reflection:', error);
       throw new Error('Failed to generate AI reflection. Please check your API configuration.');
     }
+  }
+
+  private isGeminiEndpoint(endpoint: string): boolean {
+    return (
+      endpoint.includes('generativelanguage.googleapis.com') ||
+      endpoint.includes(':generateContent')
+    );
   }
 
   private buildPrompt(content: string): string {
@@ -57,7 +132,7 @@ Entry: "${content}"
 Reflection:`;
   }
 
-  private generateMockReflection(content: string): string {
+  generateMockReflection(content: string): string {
     // Generate a simple reflection based on content analysis
     const reflections = [
       "It's wonderful that you're taking time to recognize these positive moments. Gratitude has a way of multiplying when we acknowledge it.",
@@ -73,6 +148,6 @@ Reflection:`;
   }
 
   isConfigured(): boolean {
-    return !!this.apiEndpoint && !!this.apiKey;
+    return !!this.apiKey;
   }
 }

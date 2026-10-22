@@ -78,6 +78,36 @@
         </label>
       </div>
 
+      <div *ngIf="settings.aiReflectionEnabled" class="subsettings">
+        <div class="setting-item setting-item-stacked">
+          <div class="setting-info">
+            <div class="setting-label">API Endpoint (Optional)</div>
+            <div class="setting-description">Defaults to Gemini 3.5 Flash when an API key is provided</div>
+          </div>
+          <input
+            type="url"
+            class="text-input"
+            placeholder="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+            [(ngModel)]="settings.aiApiEndpoint"
+            (ngModelChange)="updateAiConfig()"
+          />
+        </div>
+
+        <div class="setting-item setting-item-stacked">
+          <div class="setting-info">
+            <div class="setting-label">API Key (Optional)</div>
+            <div class="setting-description">Your Gemini API key (leave blank to use offline reflections)</div>
+          </div>
+          <input
+            type="password"
+            class="text-input"
+            placeholder="Enter your Gemini API key"
+            [(ngModel)]="settings.aiApiKey"
+            (ngModelChange)="updateAiConfig()"
+          />
+        </div>
+      </div>
+
       <div class="info-box">
         <p>AI reflections provide thoughtful, encouraging insights on your gratitude entries. This feature works offline with built-in responses, or you can configure it to use your own AI API for personalized reflections.</p>
       </div>
