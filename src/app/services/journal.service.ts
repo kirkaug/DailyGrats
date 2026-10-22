@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ImportResult, JournalEntry, JournalExportData } from '../models/journal-entry.model';
-import { StorageService } from './storage.service';
+import { PHOTO_REF_PREFIX, StorageService } from './storage.service';
 import { PhotoService } from './photo.service';
 
 const ENTRY_KEY_PREFIX = 'entry_';
@@ -28,29 +28,42 @@ export class JournalService {
       return;
     }
     const entryKeys = keys.filter(k => k.startsWith(ENTRY_KEY_PREFIX));
-    const entries: JournalEntry[] = [];
-    for (const key of entryKeys) {
-      const entry = await this.storageService.get<JournalEntry>(key);
-      if (entry) {
+    const loadedEntries = await Promise.all(
+      entryKeys.map(async key => {
+        const entry = await this.storageService.get<JournalEntry>(key);
+        if (!entry) {
+          return null;
+        }
+
         let photoUrl = entry.photoUrl;
-        if (photoUrl && photoUrl.length > MAX_UNCOMPRESSED_PHOTO_LENGTH && this.photoService) {
-          const originalLength = photoUrl.length;
-          photoUrl = await this.photoService.compressImage(photoUrl);
-          if (photoUrl.length < originalLength) {
+        if (photoUrl?.startsWith(PHOTO_REF_PREFIX)) {
+          const refId = photoUrl.slice(PHOTO_REF_PREFIX.length) || entry.id;
+          photoUrl = await this.storageService.getPhoto?.(refId);
+        } else if (photoUrl) {
+          if (photoUrl.length > MAX_UNCOMPRESSED_PHOTO_LENGTH && this.photoService) {
+            photoUrl = await this.photoService.compressImage(photoUrl);
+          }
+          // Migrate legacy inline photo out of Preferences into dedicated photo storage
+          if (typeof this.storageService.setPhoto === 'function') {
+            const photoRef = await this.storageService.setPhoto(entry.id, photoUrl);
+            await this.storageService.set(key, { ...entry, photoUrl: photoRef });
+          } else if (photoUrl !== entry.photoUrl) {
             await this.storageService.set(key, { ...entry, photoUrl });
           }
         }
+
         // Convert date strings back to Date objects
-        const parsedEntry = {
+        return {
           ...entry,
           photoUrl,
           date: new Date(entry.date),
           createdAt: new Date(entry.createdAt),
           updatedAt: new Date(entry.updatedAt)
-        };
-        entries.push(parsedEntry);
-      }
-    }
+        } as JournalEntry;
+      })
+    );
+
+    const entries = loadedEntries.filter((e): e is JournalEntry => e !== null);
     this.entriesSubject.next(entries.sort((a, b) => b.date.getTime() - a.date.getTime()));
   }
 
@@ -86,7 +99,7 @@ export class JournalService {
       updatedAt: now
     };
 
-    await this.storageService.set(`${ENTRY_KEY_PREFIX}${entry.id}`, entry);
+    await this.persistEntry(entry);
     const currentEntries = this.entriesSubject.value;
     const updatedEntries = [...currentEntries, entry].sort((a, b) =>
       b.date.getTime() - a.date.getTime()
@@ -107,16 +120,20 @@ export class JournalService {
     const normalizedPhoto =
       'photoUrl' in updates
         ? await this.normalizePhoto(updates.photoUrl)
-        : await this.normalizePhoto(entries[index].photoUrl);
+        : entries[index].photoUrl;
 
-    const updatedEntry = {
+    if ('photoUrl' in updates && !normalizedPhoto) {
+      await this.storageService.removePhoto?.(id);
+    }
+
+    const updatedEntry: JournalEntry = {
       ...entries[index],
       ...updates,
       photoUrl: normalizedPhoto,
       updatedAt: new Date()
     };
 
-    await this.storageService.set(`${ENTRY_KEY_PREFIX}${id}`, updatedEntry);
+    await this.persistEntry(updatedEntry);
     const updatedEntries = [...entries];
     updatedEntries[index] = updatedEntry;
     this.entriesSubject.next(updatedEntries);
@@ -133,6 +150,7 @@ export class JournalService {
     }
 
     await this.storageService.remove(`${ENTRY_KEY_PREFIX}${id}`);
+    await this.storageService.removePhoto?.(id);
     this.entriesSubject.next(filteredEntries);
     return true;
   }
@@ -228,7 +246,10 @@ export class JournalService {
       };
 
       const existed = entriesById.has(id);
-      await this.storageService.set(`${ENTRY_KEY_PREFIX}${id}`, entry);
+      if (!photoUrl) {
+        await this.storageService.removePhoto?.(id);
+      }
+      await this.persistEntry(entry);
       entriesById.set(id, entry);
 
       if (existed) {
@@ -264,10 +285,21 @@ export class JournalService {
     for (const key of entryKeys) {
       await this.storageService.remove(key);
     }
+    await this.storageService.clearPhotos?.();
 
     const removedCount = currentEntries.length;
     this.entriesSubject.next([]);
     return removedCount;
+  }
+
+  private async persistEntry(entry: JournalEntry): Promise<void> {
+    const key = `${ENTRY_KEY_PREFIX}${entry.id}`;
+    if (entry.photoUrl && typeof this.storageService.setPhoto === 'function') {
+      const photoRef = await this.storageService.setPhoto(entry.id, entry.photoUrl);
+      await this.storageService.set(key, { ...entry, photoUrl: photoRef });
+    } else {
+      await this.storageService.set(key, entry);
+    }
   }
 
   private async normalizePhoto(photoUrl?: string): Promise<string | undefined> {
@@ -285,6 +317,10 @@ export class JournalService {
   }
 
   private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

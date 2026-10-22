@@ -41,43 +41,44 @@ export class SettingsService {
   private async loadSettings(): Promise<void> {
     const settings = await this.storageService.get<AppSettings>(SETTINGS_KEY);
     if (settings) {
-      const merged: AppSettings = {
+      const merged = this.cloneSettings({
         ...DEFAULT_SETTINGS,
         ...settings,
         notifications: {
           ...DEFAULT_SETTINGS.notifications,
           ...(settings.notifications || {})
         }
-      };
+      });
       this.settingsSubject.next(merged);
       this.applyTheme(merged.theme);
     } else {
       // Save default settings
-      await this.saveSettings(DEFAULT_SETTINGS);
-      this.applyTheme(DEFAULT_SETTINGS.theme);
+      const defaults = this.cloneSettings(DEFAULT_SETTINGS);
+      await this.saveSettings(defaults);
+      this.applyTheme(defaults.theme);
     }
   }
 
   async getSettings(): Promise<AppSettings> {
     await this.initializedPromise;
-    return this.settingsSubject.value;
+    return this.cloneSettings(this.settingsSubject.value);
   }
 
   async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
     await this.initializedPromise;
     const currentSettings = this.settingsSubject.value;
-    const newSettings = {
+    const newSettings = this.cloneSettings({
       ...currentSettings,
       ...updates,
       notifications: {
         ...currentSettings.notifications,
         ...(updates.notifications || {})
       }
-    };
+    });
 
     await this.saveSettings(newSettings);
     this.applyTheme(newSettings.theme);
-    return newSettings;
+    return this.cloneSettings(newSettings);
   }
 
   applyTheme(theme: 'light' | 'dark' | 'auto'): void {
@@ -90,7 +91,18 @@ export class SettingsService {
   }
 
   private async saveSettings(settings: AppSettings): Promise<void> {
-    await this.storageService.set(SETTINGS_KEY, settings);
-    this.settingsSubject.next(settings);
+    const cloned = this.cloneSettings(settings);
+    await this.storageService.set(SETTINGS_KEY, cloned);
+    this.settingsSubject.next(cloned);
+  }
+
+  private cloneSettings(settings: AppSettings): AppSettings {
+    return {
+      ...settings,
+      notifications: {
+        ...settings.notifications,
+        days: [...(settings.notifications?.days ?? DEFAULT_SETTINGS.notifications.days)]
+      }
+    };
   }
 }

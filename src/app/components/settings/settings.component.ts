@@ -1,20 +1,23 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, Optional } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { SettingsService } from '../../services/settings.service';
 import { NotificationService } from '../../services/notification.service';
 import { JournalService } from '../../services/journal.service';
+import { DialogService } from '../../services/dialog.service';
 import { AppSettings } from '../../models/journal-entry.model';
+
+const AI_CONFIG_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   settings: AppSettings = {
     notifications: {
       enabled: false,
@@ -41,13 +44,15 @@ export class SettingsComponent implements OnInit {
   importExportMessage = '';
   importExportError = false;
   isProcessingData = false;
+  private aiConfigDebounceTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     private settingsService: SettingsService,
     private notificationService: NotificationService,
     private journalService: JournalService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private dialogService?: DialogService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -56,13 +61,23 @@ export class SettingsComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  ngOnDestroy(): void {
+    if (this.aiConfigDebounceTimer !== undefined) {
+      clearTimeout(this.aiConfigDebounceTimer);
+      this.aiConfigDebounceTimer = undefined;
+      void this.settingsService.updateSettings(this.settings);
+    }
+  }
+
   async toggleNotifications(): Promise<void> {
     if (this.settings.notifications.enabled) {
       // Enabling notifications - check permissions
       if (!this.permissionGranted) {
         this.permissionGranted = await this.notificationService.requestPermissions();
         if (!this.permissionGranted) {
-          alert('Notification permissions are required to enable reminders.');
+          await (this.dialogService ?? new DialogService()).alert(
+            'Notification permissions are required to enable reminders.'
+          );
           // Revert the toggle since permission was denied
           this.settings.notifications.enabled = false;
           this.cdr.markForCheck();
@@ -71,14 +86,14 @@ export class SettingsComponent implements OnInit {
       }
     }
 
-    await this.saveSettings();
+    await this.saveSettings(true);
     this.cdr.markForCheck();
   }
 
   async updateNotificationTime(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     this.settings.notifications.time = target.value;
-    await this.saveSettings();
+    await this.saveSettings(true);
   }
 
   async toggleDay(day: number): Promise<void> {
@@ -88,7 +103,9 @@ export class SettingsComponent implements OnInit {
       if (this.settings.notifications.days.length > 1) {
         this.settings.notifications.days = this.settings.notifications.days.filter(d => d !== day);
       } else {
-        alert('At least one day must be selected.');
+        await (this.dialogService ?? new DialogService()).alert(
+          'At least one day must be selected.'
+        );
         return;
       }
     } else {
@@ -97,7 +114,7 @@ export class SettingsComponent implements OnInit {
       this.settings.notifications.days.sort();
     }
 
-    await this.saveSettings();
+    await this.saveSettings(true);
   }
 
   isDaySelected(day: number): boolean {
@@ -106,16 +123,30 @@ export class SettingsComponent implements OnInit {
 
   async toggleAiReflection(): Promise<void> {
     this.settings.aiReflectionEnabled = !this.settings.aiReflectionEnabled;
-    await this.saveSettings();
+    await this.saveSettings(false);
+  }
+
+  onAiConfigInput(): void {
+    if (this.aiConfigDebounceTimer !== undefined) {
+      clearTimeout(this.aiConfigDebounceTimer);
+    }
+    this.aiConfigDebounceTimer = setTimeout(() => {
+      this.aiConfigDebounceTimer = undefined;
+      void this.updateAiConfig();
+    }, AI_CONFIG_DEBOUNCE_MS);
   }
 
   async updateAiConfig(): Promise<void> {
-    await this.saveSettings();
+    if (this.aiConfigDebounceTimer !== undefined) {
+      clearTimeout(this.aiConfigDebounceTimer);
+      this.aiConfigDebounceTimer = undefined;
+    }
+    await this.saveSettings(false);
   }
 
   async updateTheme(theme: 'light' | 'dark' | 'auto'): Promise<void> {
     this.settings.theme = theme;
-    await this.saveSettings();
+    await this.saveSettings(false);
   }
 
   async exportEntries(): Promise<void> {
@@ -127,21 +158,18 @@ export class SettingsComponent implements OnInit {
     try {
       const entries = await this.journalService.getEntries();
       const jsonData = await this.journalService.exportEntries();
-      const blob = new Blob([jsonData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const dateStamp = new Date().toISOString().split('T')[0];
+      const dateStamp = this.getLocalDateStamp(new Date());
+      const fileName = `dailygrats-entries-${dateStamp}.json`;
 
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `dailygrats-entries-${dateStamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      await this.saveOrShareExportFile(fileName, jsonData);
 
       const count = entries.length;
       this.importExportMessage = `Exported ${count} ${count === 1 ? 'entry' : 'entries'} successfully.`;
     } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // User dismissed native share sheet
+        return;
+      }
       this.importExportError = true;
       this.importExportMessage =
         error instanceof Error ? error.message : 'Failed to export entries.';
@@ -149,6 +177,56 @@ export class SettingsComponent implements OnInit {
       this.isProcessingData = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private async saveOrShareExportFile(fileName: string, jsonData: string): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      const plugins = (Capacitor as unknown as {
+        Plugins?: Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>>;
+      }).Plugins;
+
+      const filesystem = plugins?.['Filesystem'];
+      const share = plugins?.['Share'];
+
+      if (filesystem?.['writeFile'] && share?.['share']) {
+        const writeResult = (await filesystem['writeFile']({
+          path: fileName,
+          data: jsonData,
+          directory: 'CACHE',
+          encoding: 'utf8'
+        })) as { uri?: string };
+
+        if (writeResult?.uri) {
+          await share['share']({
+            title: 'DailyGrats Backup',
+            url: writeResult.uri,
+            dialogTitle: 'Export Gratitude Entries'
+          });
+          return;
+        }
+      }
+
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof File !== 'undefined') {
+        const file = new File([jsonData], fileName, { type: 'application/json' });
+        if (typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'DailyGrats Backup',
+            files: [file]
+          });
+          return;
+        }
+      }
+    }
+
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   triggerImport(fileInput: HTMLInputElement): void {
@@ -184,11 +262,10 @@ export class SettingsComponent implements OnInit {
   }
 
   async clearData(): Promise<void> {
-    if (
-      !confirm(
-        'Are you sure you want to delete all gratitude entries? This action cannot be undone.'
-      )
-    ) {
+    const confirmed = await (this.dialogService ?? new DialogService()).confirm(
+      'Are you sure you want to delete all gratitude entries? This action cannot be undone.'
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -210,15 +287,23 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  private async saveSettings(): Promise<void> {
+  private async saveSettings(updateNotifications = false): Promise<void> {
     await this.settingsService.updateSettings(this.settings);
 
-    // Update notifications schedule
-    if (this.settings.notifications.enabled) {
-      await this.notificationService.scheduleNotifications();
-    } else {
-      await this.notificationService.cancelNotifications();
+    if (updateNotifications) {
+      if (this.settings.notifications.enabled) {
+        await this.notificationService.scheduleNotifications();
+      } else {
+        await this.notificationService.cancelNotifications();
+      }
     }
+  }
+
+  private getLocalDateStamp(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   goBack(): void {

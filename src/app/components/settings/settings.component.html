@@ -1,7 +1,7 @@
 <div class="settings-container">
   <header class="settings-header">
-    <button class="back-btn" (click)="goBack()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button type="button" class="back-btn" (click)="goBack()" aria-label="Back to entries" title="Back">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <line x1="19" y1="12" x2="5" y2="12"></line>
         <polyline points="12 19 5 12 12 5"></polyline>
       </svg>
@@ -29,35 +29,38 @@
         </label>
       </div>
 
-      <div *ngIf="settings.notifications.enabled" class="subsettings">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">Reminder Time</div>
+      @if (settings.notifications.enabled) {
+        <div class="subsettings">
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">Reminder Time</div>
+            </div>
+            <input
+              type="time"
+              class="time-input"
+              [value]="settings.notifications.time"
+              (change)="updateNotificationTime($event)"
+            />
           </div>
-          <input
-            type="time"
-            class="time-input"
-            [value]="settings.notifications.time"
-            (change)="updateNotificationTime($event)"
-          />
-        </div>
 
-        <div class="setting-item setting-item-stacked">
-          <div class="setting-info">
-            <div class="setting-label">Reminder Days</div>
-          </div>
-          <div class="days-selector">
-            <button
-              *ngFor="let day of daysOfWeek"
-              class="day-btn"
-              [class.selected]="isDaySelected(day.value)"
-              (click)="toggleDay(day.value)"
-            >
-              {{ day.label }}
-            </button>
+          <div class="setting-item setting-item-stacked">
+            <div class="setting-info">
+              <div class="setting-label">Reminder Days</div>
+            </div>
+            <div class="days-selector">
+              @for (day of daysOfWeek; track day.value) {
+                <button
+                  class="day-btn"
+                  [class.selected]="isDaySelected(day.value)"
+                  (click)="toggleDay(day.value)"
+                >
+                  {{ day.label }}
+                </button>
+              }
+            </div>
           </div>
         </div>
-      </div>
+      }
     </section>
 
     <section class="settings-section">
@@ -78,35 +81,39 @@
         </label>
       </div>
 
-      <div *ngIf="settings.aiReflectionEnabled" class="subsettings">
-        <div class="setting-item setting-item-stacked">
-          <div class="setting-info">
-            <div class="setting-label">API Endpoint (Optional)</div>
-            <div class="setting-description">Defaults to Gemini 3.5 Flash when an API key is provided</div>
+      @if (settings.aiReflectionEnabled) {
+        <div class="subsettings">
+          <div class="setting-item setting-item-stacked">
+            <div class="setting-info">
+              <div class="setting-label">API Endpoint (Optional)</div>
+              <div class="setting-description">Defaults to Gemini 3.5 Flash when an API key is provided</div>
+            </div>
+            <input
+              type="url"
+              class="text-input"
+              placeholder="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+              [(ngModel)]="settings.aiApiEndpoint"
+              (ngModelChange)="onAiConfigInput()"
+              (blur)="updateAiConfig()"
+            />
           </div>
-          <input
-            type="url"
-            class="text-input"
-            placeholder="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
-            [(ngModel)]="settings.aiApiEndpoint"
-            (ngModelChange)="updateAiConfig()"
-          />
-        </div>
 
-        <div class="setting-item setting-item-stacked">
-          <div class="setting-info">
-            <div class="setting-label">API Key (Optional)</div>
-            <div class="setting-description">Your Gemini API key (leave blank to use offline reflections)</div>
+          <div class="setting-item setting-item-stacked">
+            <div class="setting-info">
+              <div class="setting-label">API Key (Optional)</div>
+              <div class="setting-description">Your Gemini API key (leave blank to use offline reflections)</div>
+            </div>
+            <input
+              type="password"
+              class="text-input"
+              placeholder="Enter your Gemini API key"
+              [(ngModel)]="settings.aiApiKey"
+              (ngModelChange)="onAiConfigInput()"
+              (blur)="updateAiConfig()"
+            />
           </div>
-          <input
-            type="password"
-            class="text-input"
-            placeholder="Enter your Gemini API key"
-            [(ngModel)]="settings.aiApiKey"
-            (ngModelChange)="updateAiConfig()"
-          />
         </div>
-      </div>
+      }
 
       <div class="info-box">
         <p>AI reflections provide thoughtful, encouraging insights on your gratitude entries. This feature works offline with built-in responses, or you can configure it to use your own AI API for personalized reflections.</p>
@@ -201,14 +208,15 @@
         </button>
       </div>
 
-      <div
-        *ngIf="importExportMessage"
-        class="data-status-message"
-        [class.error]="importExportError"
-        role="status"
-      >
-        {{ importExportMessage }}
-      </div>
+      @if (importExportMessage) {
+        <div
+          class="data-status-message"
+          [class.error]="importExportError"
+          role="status"
+        >
+          {{ importExportMessage }}
+        </div>
+      }
     </section>
 
     <section class="settings-section app-info">

@@ -1,6 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { JournalService } from '../../services/journal.service';
 import { JournalEntry } from '../../models/journal-entry.model';
 
@@ -16,16 +16,17 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 @Component({
   selector: 'app-entry-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   templateUrl: './entry-list.component.html',
   styleUrls: ['./entry-list.component.scss']
 })
-export class EntryListComponent implements OnInit {
+export class EntryListComponent implements OnInit, OnDestroy {
   entries: JournalEntry[] = [];
   filteredEntries: JournalEntry[] = [];
   availableFilterOptions: FilterOption[] = [];
   selectedFilter: TimeFilter = 'all';
   loading = true;
+  private entriesSubscription?: Subscription;
 
   readonly filterOptions: FilterOption[] = [
     { value: 'all', label: 'All' },
@@ -44,8 +45,13 @@ export class EntryListComponent implements OnInit {
     this.loadEntries();
   }
 
+  ngOnDestroy(): void {
+    this.entriesSubscription?.unsubscribe();
+  }
+
   private loadEntries(): void {
-    this.journalService.entries$.subscribe(entries => {
+    this.entriesSubscription?.unsubscribe();
+    this.entriesSubscription = this.journalService.entries$.subscribe(entries => {
       this.entries = entries;
       this.applyFilter();
       this.loading = false;

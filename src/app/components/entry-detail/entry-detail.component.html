@@ -1,18 +1,20 @@
 <div class="entry-detail-container">
   <header class="detail-header">
-    <button class="back-btn" (click)="cancel()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button type="button" class="back-btn" (click)="cancel()" aria-label="Back to entries" title="Back">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <line x1="19" y1="12" x2="5" y2="12"></line>
         <polyline points="12 19 5 12 12 5"></polyline>
       </svg>
     </button>
     <h2>{{ isNew ? 'New Entry' : 'Edit Entry' }}</h2>
-    <button *ngIf="!isNew" class="delete-btn" (click)="deleteEntry()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-      </svg>
-    </button>
+    @if (!isNew) {
+      <button type="button" class="delete-btn" (click)="deleteEntry()" aria-label="Delete entry" title="Delete Entry">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    }
   </header>
 
   <div class="entry-form">
@@ -27,15 +29,17 @@
     </div>
 
     <div class="photo-section">
-      <div *ngIf="photoUrl" class="photo-preview">
-        <img [src]="photoUrl" alt="Entry photo" />
-        <button class="remove-photo-btn" (click)="removePhoto()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
+      @if (photoUrl) {
+        <div class="photo-preview">
+          <img [src]="photoUrl" alt="Entry photo" />
+          <button type="button" class="remove-photo-btn" (click)="removePhoto()" aria-label="Remove photo" title="Remove Photo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      }
 
       <div class="photo-actions">
         <button class="add-photo-btn" (click)="togglePhotoOptions()">
@@ -47,32 +51,42 @@
           {{ photoUrl ? 'Change Photo' : 'Add Photo' }}
         </button>
 
-        <div *ngIf="showPhotoOptions" class="photo-options">
-          <button (click)="takePhoto()">Take Photo</button>
-          <button (click)="selectPhoto()">Choose from Gallery</button>
-        </div>
+        @if (showPhotoOptions) {
+          <div class="photo-options">
+            <button (click)="takePhoto()">Take Photo</button>
+            <button (click)="selectPhoto()">Choose from Gallery</button>
+          </div>
+        }
       </div>
     </div>
 
-    <div *ngIf="aiReflectionEnabled" class="ai-reflection-section">
-      <h3>AI Reflection</h3>
-      <div *ngIf="aiReflection" class="reflection-content">
-        <p>{{ aiReflection }}</p>
+    @if (aiReflectionEnabled) {
+      <div class="ai-reflection-section">
+        <h3>AI Reflection</h3>
+        @if (aiReflection) {
+          <div class="reflection-content">
+            <p>{{ aiReflection }}</p>
+          </div>
+        } @else {
+          <div class="no-reflection">
+            <p>Get an AI-powered reflection on your gratitude entry.</p>
+          </div>
+        }
+        <button
+          class="generate-reflection-btn"
+          (click)="generateReflection()"
+          [disabled]="isGeneratingReflection || !content.trim()"
+        >
+          @if (!isGeneratingReflection) {
+            <span>
+              {{ aiReflection ? 'Regenerate Reflection' : 'Generate Reflection' }}
+            </span>
+          } @else {
+            <span>Generating...</span>
+          }
+        </button>
       </div>
-      <div *ngIf="!aiReflection" class="no-reflection">
-        <p>Get an AI-powered reflection on your gratitude entry.</p>
-      </div>
-      <button
-        class="generate-reflection-btn"
-        (click)="generateReflection()"
-        [disabled]="isGeneratingReflection || !content.trim()"
-      >
-        <span *ngIf="!isGeneratingReflection">
-          {{ aiReflection ? 'Regenerate Reflection' : 'Generate Reflection' }}
-        </span>
-        <span *ngIf="isGeneratingReflection">Generating...</span>
-      </button>
-    </div>
+    }
 
     <div class="action-buttons">
       <button class="cancel-btn" (click)="cancel()">Cancel</button>

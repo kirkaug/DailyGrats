@@ -1,17 +1,17 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnInit, Optional } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { JournalService } from '../../services/journal.service';
 import { PhotoService } from '../../services/photo.service';
 import { AiReflectionService } from '../../services/ai-reflection.service';
 import { SettingsService } from '../../services/settings.service';
+import { DialogService } from '../../services/dialog.service';
 import { JournalEntry } from '../../models/journal-entry.model';
 
 @Component({
   selector: 'app-entry-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './entry-detail.component.html',
   styleUrls: ['./entry-detail.component.scss']
 })
@@ -32,7 +32,8 @@ export class EntryDetailComponent implements OnInit {
     private photoService: PhotoService,
     private aiReflectionService: AiReflectionService,
     private settingsService: SettingsService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private dialogService?: DialogService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -82,7 +83,9 @@ export class EntryDetailComponent implements OnInit {
       this.router.navigate(['/']);
     } catch (error) {
       console.error('Error saving entry:', error);
-      alert('Failed to save entry. Please try again.');
+      await (this.dialogService ?? new DialogService()).alert(
+        'Failed to save entry. Please try again.'
+      );
     }
   }
 
@@ -131,7 +134,9 @@ export class EntryDetailComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error generating reflection:', error);
-      alert('Failed to generate AI reflection. Using offline mode.');
+      await (this.dialogService ?? new DialogService()).alert(
+        'Failed to generate AI reflection. Using offline mode.'
+      );
       // Fallback to mock reflection
       const reflection = this.aiReflectionService.generateMockReflection(this.content);
       this.aiReflection = reflection;
@@ -152,7 +157,10 @@ export class EntryDetailComponent implements OnInit {
       return;
     }
 
-    if (confirm('Are you sure you want to delete this entry?')) {
+    const confirmed = await (this.dialogService ?? new DialogService()).confirm(
+      'Are you sure you want to delete this entry?'
+    );
+    if (confirmed) {
       await this.journalService.deleteEntry(this.entry.id);
       this.router.navigate(['/']);
     }

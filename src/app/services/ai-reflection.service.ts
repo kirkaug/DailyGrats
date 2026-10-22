@@ -54,10 +54,12 @@ export class AiReflectionService {
 
     try {
       if (this.isGeminiEndpoint(endpoint)) {
-        const separator = endpoint.includes('?') ? '&' : '?';
-        const urlWithKey = endpoint.includes('key=')
-          ? endpoint
-          : `${endpoint}${separator}key=${encodeURIComponent(apiKey)}`;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (!endpoint.includes('key=')) {
+          headers['x-goog-api-key'] = apiKey;
+        }
 
         const response = await firstValueFrom(
           this.http.post<{
@@ -65,15 +67,11 @@ export class AiReflectionService {
               content?: { parts?: Array<{ text?: string; thought?: boolean }> };
             }>;
           }>(
-            urlWithKey,
+            endpoint,
             {
               contents: [{ parts: [{ text: prompt }] }]
             },
-            {
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            }
+            { headers }
           )
         );
 

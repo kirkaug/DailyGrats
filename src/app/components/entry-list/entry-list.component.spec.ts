@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { EntryListComponent } from './entry-list.component';
 import { JournalService } from '../../services/journal.service';
@@ -138,5 +138,33 @@ describe('EntryListComponent time increment filtering', () => {
     expect(component.availableFilterOptions.map(o => o.value)).toEqual(['all']);
     expect(component.selectedFilter).toBe('all');
     expect(component.filteredEntries.length).toBe(1);
+  });
+
+  it('unsubscribes from JournalService.entries$ on destroy', () => {
+    const fixture = TestBed.createComponent(EntryListComponent);
+    fixture.detectChanges();
+    expect(entriesSubject.observed).toBe(true);
+
+    fixture.destroy();
+    expect(entriesSubject.observed).toBe(false);
+  });
+
+  it('renders keyboard-focusable entry cards that activate on Enter', () => {
+    const fixture = TestBed.createComponent(EntryListComponent);
+    const router = TestBed.inject(Router);
+    let navigatedTo: unknown[] | undefined;
+    router.navigate = async (commands: unknown[]) => {
+      navigatedTo = commands;
+      return true;
+    };
+    fixture.detectChanges();
+
+    const firstCard = fixture.nativeElement.querySelector('.entry-card') as HTMLElement;
+    expect(firstCard.getAttribute('role')).toBe('button');
+    expect(firstCard.getAttribute('tabindex')).toBe('0');
+    expect(firstCard.getAttribute('aria-label')).toContain('View entry');
+
+    firstCard.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(navigatedTo).toEqual(['/entry', 'today']);
   });
 });
