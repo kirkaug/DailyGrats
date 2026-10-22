@@ -34,9 +34,35 @@
     <p>Begin by writing your first entry. Take a moment to reflect on what you're grateful for today.</p>
   </div>
 
-  <div *ngIf="!loading && entries.length > 0" class="entries-grid">
-    <div *ngFor="let entry of entries" class="entry-card" (click)="viewEntry(entry)">
-      <div class="entry-date">{{ formatDate(entry.date) }}</div>
+  <div *ngIf="!loading && entries.length > 0" class="filter-bar" role="group" aria-label="Filter entries by time increment">
+    <button
+      *ngFor="let option of availableFilterOptions"
+      type="button"
+      class="filter-btn"
+      [class.active]="selectedFilter === option.value"
+      [attr.aria-pressed]="selectedFilter === option.value"
+      (click)="setFilter(option.value)"
+    >
+      {{ option.label }}
+    </button>
+  </div>
+
+  <div *ngIf="!loading && entries.length > 0 && filteredEntries.length === 0" class="empty-state empty-filter-state">
+    <h2>No Matching Entries</h2>
+    <p>{{ getEmptyFilterMessage() }}</p>
+    <button type="button" class="reset-filter-btn" (click)="setFilter('all')">
+      Show All Entries
+    </button>
+  </div>
+
+  <div *ngIf="!loading && filteredEntries.length > 0" class="entries-grid">
+    <div *ngFor="let entry of filteredEntries" class="entry-card" (click)="viewEntry(entry)">
+      <div class="entry-card-header">
+        <div class="entry-date">{{ formatDate(entry.date) }}</div>
+        <span *ngIf="selectedFilter !== 'all'" class="entry-increment-badge">
+          {{ getIncrementLabel(entry.date) }}
+        </span>
+      </div>
       <div class="entry-content">
         <p>{{ getPreview(entry.content) }}</p>
       </div>

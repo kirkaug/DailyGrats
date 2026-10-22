@@ -237,4 +237,73 @@ describe('Fixes 1-4 Verification', () => {
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
     expect(textarea.value).toBe('Existing gratitude content in textarea');
   });
+
+  it('Exports entries to JSON and merges imported entries (updating matching IDs, adding new ones)', async () => {
+    const store = new Map<string, unknown>();
+    const initialEntry: JournalEntry = {
+      id: 'entry1',
+      date: new Date('2026-10-20T10:00:00Z'),
+      content: 'Original content',
+      aiReflection: 'Original reflection',
+      createdAt: new Date('2026-10-20T10:00:00Z'),
+      updatedAt: new Date('2026-10-20T10:00:00Z')
+    };
+    store.set('entry_entry1', initialEntry);
+
+    const mockStorage: Partial<StorageService> = {
+      keys: async () => Array.from(store.keys()),
+      get: async <T>(key: string) => (store.get(key) as T) ?? null,
+      set: async (key: string, value: unknown) => {
+        store.set(key, value);
+      },
+      remove: async (key: string) => {
+        store.delete(key);
+      }
+    };
+
+    const service = new JournalService(mockStorage as StorageService);
+    const exportedJson = await service.exportEntries();
+    const parsedExport = JSON.parse(exportedJson);
+    expect(parsedExport.version).toBe(1);
+    expect(parsedExport.entries.length).toBe(1);
+    expect(parsedExport.entries[0].id).toBe('entry1');
+
+    const importPayload = JSON.stringify({
+      version: 1,
+      exportedAt: '2026-10-22T12:00:00Z',
+      entries: [
+        {
+          id: 'entry1',
+          date: '2026-10-20T10:00:00Z',
+          content: 'Updated content from import',
+          aiReflection: 'Updated reflection',
+          createdAt: '2026-10-20T10:00:00Z',
+          updatedAt: '2026-10-22T12:00:00Z'
+        },
+        {
+          id: 'entry2',
+          date: '2026-10-21T10:00:00Z',
+          content: 'Brand new imported entry',
+          photoUrl: 'data:image/jpeg;base64,abc',
+          createdAt: '2026-10-21T10:00:00Z',
+          updatedAt: '2026-10-21T10:00:00Z'
+        }
+      ]
+    });
+
+    const result = await service.importEntries(importPayload);
+    expect(result).toEqual({ added: 1, updated: 1 });
+
+    const allEntries = await service.getEntries();
+    expect(allEntries.length).toBe(2);
+    expect(allEntries[0].id).toBe('entry2');
+    expect(allEntries[0].photoUrl).toBe('data:image/jpeg;base64,abc');
+    expect(allEntries[1].id).toBe('entry1');
+    expect(allEntries[1].content).toBe('Updated content from import');
+
+    const clearedCount = await service.clearEntries();
+    expect(clearedCount).toBe(2);
+    expect((await service.getEntries()).length).toBe(0);
+    expect(store.size).toBe(0);
+  });
 });

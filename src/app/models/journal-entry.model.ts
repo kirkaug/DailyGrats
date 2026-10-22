@@ -8,6 +8,18 @@ export interface JournalEntry {
   updatedAt: Date;
 }
 
+export interface JournalExportData {
+  version: number;
+  exportedAt: string;
+  entries: JournalEntry[];
+}
+
+export interface ImportResult {
+  added: number;
+  updated: number;
+}
+
+
 export interface NotificationSettings {
   enabled: boolean;
   time: string; // Format: "HH:MM"

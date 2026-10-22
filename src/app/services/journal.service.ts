@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { JournalEntry } from '../models/journal-entry.model';
+import { ImportResult, JournalEntry, JournalExportData } from '../models/journal-entry.model';
 import { StorageService } from './storage.service';
 import { PhotoService } from './photo.service';
 
@@ -105,7 +105,7 @@ export class JournalService {
     }
 
     const normalizedPhoto =
-      updates.photoUrl !== undefined
+      'photoUrl' in updates
         ? await this.normalizePhoto(updates.photoUrl)
         : await this.normalizePhoto(entries[index].photoUrl);
 
@@ -139,6 +139,135 @@ export class JournalService {
 
   async addAiReflection(id: string, reflection: string): Promise<JournalEntry | null> {
     return this.updateEntry(id, { aiReflection: reflection });
+  }
+
+  async exportEntries(): Promise<string> {
+    await this.initializedPromise;
+    const exportData: JournalExportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      entries: this.entriesSubject.value
+    };
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  async importEntries(jsonData: string): Promise<ImportResult> {
+    await this.initializedPromise;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonData);
+    } catch {
+      throw new Error('Invalid JSON file.');
+    }
+
+    let rawEntries: unknown[];
+    if (Array.isArray(parsed)) {
+      rawEntries = parsed;
+    } else if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'entries' in parsed &&
+      Array.isArray((parsed as { entries: unknown }).entries)
+    ) {
+      rawEntries = (parsed as { entries: unknown[] }).entries;
+    } else {
+      throw new Error('Invalid export format: expected an "entries" array.');
+    }
+
+    const currentEntries = [...this.entriesSubject.value];
+    const entriesById = new Map<string, JournalEntry>(
+      currentEntries.map(entry => [entry.id, entry])
+    );
+
+    let added = 0;
+    let updated = 0;
+
+    for (const item of rawEntries) {
+      if (!item || typeof item !== 'object') {
+        throw new Error('Invalid entry in import file.');
+      }
+
+      const raw = item as Record<string, unknown>;
+      if (typeof raw['content'] !== 'string') {
+        throw new Error('Each imported entry must have a valid text "content" field.');
+      }
+
+      const id =
+        typeof raw['id'] === 'string' && raw['id'].trim().length > 0
+          ? raw['id'].trim()
+          : this.generateId();
+
+      const now = new Date();
+      const date = raw['date'] ? new Date(String(raw['date'])) : now;
+      if (isNaN(date.getTime())) {
+        throw new Error(`Invalid date for entry "${id}".`);
+      }
+
+      const createdAt = raw['createdAt'] ? new Date(String(raw['createdAt'])) : date;
+      const updatedAt = raw['updatedAt'] ? new Date(String(raw['updatedAt'])) : now;
+
+      const photoUrl =
+        typeof raw['photoUrl'] === 'string' && raw['photoUrl'].length > 0
+          ? await this.normalizePhoto(raw['photoUrl'])
+          : undefined;
+
+      const aiReflection =
+        typeof raw['aiReflection'] === 'string' && raw['aiReflection'].length > 0
+          ? raw['aiReflection']
+          : undefined;
+
+      const entry: JournalEntry = {
+        id,
+        date,
+        content: raw['content'],
+        photoUrl,
+        aiReflection,
+        createdAt: isNaN(createdAt.getTime()) ? date : createdAt,
+        updatedAt: isNaN(updatedAt.getTime()) ? now : updatedAt
+      };
+
+      const existed = entriesById.has(id);
+      await this.storageService.set(`${ENTRY_KEY_PREFIX}${id}`, entry);
+      entriesById.set(id, entry);
+
+      if (existed) {
+        updated++;
+      } else {
+        added++;
+      }
+    }
+
+    const mergedEntries = Array.from(entriesById.values()).sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    );
+    this.entriesSubject.next(mergedEntries);
+
+    return { added, updated };
+  }
+
+  async clearEntries(): Promise<number> {
+    await this.initializedPromise;
+    const currentEntries = this.entriesSubject.value;
+    const keys = await this.storageService.keys();
+    const entryKeys = new Set<string>(
+      currentEntries.map(entry => `${ENTRY_KEY_PREFIX}${entry.id}`)
+    );
+    if (keys) {
+      for (const key of keys) {
+        if (key.startsWith(ENTRY_KEY_PREFIX)) {
+          entryKeys.add(key);
+        }
+      }
+    }
+
+    for (const key of entryKeys) {
+      await this.storageService.remove(key);
+    }
+
+    const removedCount = currentEntries.length;
+    this.entriesSubject.next([]);
+    return removedCount;
   }
 
   private async normalizePhoto(photoUrl?: string): Promise<string | undefined> {

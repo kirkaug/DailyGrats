@@ -4,6 +4,15 @@ import { Router, RouterLink } from '@angular/router';
 import { JournalService } from '../../services/journal.service';
 import { JournalEntry } from '../../models/journal-entry.model';
 
+export type TimeFilter = 'all' | 'week' | 'month' | 'year';
+
+export interface FilterOption {
+  value: TimeFilter;
+  label: string;
+}
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 @Component({
   selector: 'app-entry-list',
   standalone: true,
@@ -13,7 +22,17 @@ import { JournalEntry } from '../../models/journal-entry.model';
 })
 export class EntryListComponent implements OnInit {
   entries: JournalEntry[] = [];
+  filteredEntries: JournalEntry[] = [];
+  availableFilterOptions: FilterOption[] = [];
+  selectedFilter: TimeFilter = 'all';
   loading = true;
+
+  readonly filterOptions: FilterOption[] = [
+    { value: 'all', label: 'All' },
+    { value: 'week', label: 'Weekly' },
+    { value: 'month', label: 'Monthly' },
+    { value: 'year', label: 'Yearly' }
+  ];
 
   constructor(
     private journalService: JournalService,
@@ -28,9 +47,116 @@ export class EntryListComponent implements OnInit {
   private loadEntries(): void {
     this.journalService.entries$.subscribe(entries => {
       this.entries = entries;
+      this.applyFilter();
       this.loading = false;
       this.cdr.markForCheck();
     });
+  }
+
+  setFilter(filter: TimeFilter, referenceDate: Date = new Date()): void {
+    if (this.selectedFilter === filter) {
+      return;
+    }
+    this.selectedFilter = filter;
+    this.applyFilter(referenceDate);
+  }
+
+  applyFilter(referenceDate: Date = new Date()): void {
+    this.availableFilterOptions = this.filterOptions.filter(
+      option =>
+        option.value === 'all' ||
+        this.entries.some(entry => this.matchesFilter(entry.date, option.value, referenceDate))
+    );
+
+    if (
+      this.selectedFilter !== 'all' &&
+      !this.availableFilterOptions.some(option => option.value === this.selectedFilter)
+    ) {
+      this.selectedFilter = 'all';
+    }
+
+    this.filteredEntries = this.entries.filter(entry =>
+      this.matchesFilter(entry.date, this.selectedFilter, referenceDate)
+    );
+    this.cdr.markForCheck();
+  }
+
+  matchesFilter(entryDateInput: Date, filter: TimeFilter, referenceDate: Date = new Date()): boolean {
+    if (filter === 'all') {
+      return true;
+    }
+
+    const entryDate = new Date(entryDateInput);
+    const today = new Date(referenceDate);
+
+    const diffDays = this.getCalendarDaysDiff(entryDate, today);
+    if (diffDays <= 0) {
+      return false;
+    }
+
+    switch (filter) {
+      case 'week':
+        return diffDays >= 7 && diffDays % 7 === 0;
+      case 'month': {
+        const monthsDiff =
+          (today.getFullYear() - entryDate.getFullYear()) * 12 +
+          (today.getMonth() - entryDate.getMonth());
+        return monthsDiff >= 1 && entryDate.getDate() === today.getDate();
+      }
+      case 'year': {
+        const yearsDiff = today.getFullYear() - entryDate.getFullYear();
+        return (
+          yearsDiff >= 1 &&
+          entryDate.getMonth() === today.getMonth() &&
+          entryDate.getDate() === today.getDate()
+        );
+      }
+    }
+  }
+
+  getIncrementLabel(entryDateInput: Date, referenceDate: Date = new Date()): string {
+    if (this.selectedFilter === 'all') {
+      return '';
+    }
+
+    const entryDate = new Date(entryDateInput);
+    const today = new Date(referenceDate);
+
+    switch (this.selectedFilter) {
+      case 'week': {
+        const weeks = Math.round(this.getCalendarDaysDiff(entryDate, today) / 7);
+        return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+      }
+      case 'month': {
+        const months =
+          (today.getFullYear() - entryDate.getFullYear()) * 12 +
+          (today.getMonth() - entryDate.getMonth());
+        return months === 1 ? '1 month ago' : `${months} months ago`;
+      }
+      case 'year': {
+        const years = today.getFullYear() - entryDate.getFullYear();
+        return years === 1 ? '1 year ago' : `${years} years ago`;
+      }
+    }
+  }
+
+  getEmptyFilterMessage(): string {
+    switch (this.selectedFilter) {
+      case 'week':
+        return 'No entries found from 1 or more weeks ago on this day of the week.';
+      case 'month':
+        return 'No entries found from previous months on this day of the month.';
+      case 'year':
+        return 'No entries found from previous years on this date.';
+      default:
+        return '';
+    }
+  }
+
+  private getCalendarDaysDiff(earlier: Date, later: Date): number {
+    const utcEarlier = Date.UTC(earlier.getFullYear(), earlier.getMonth(), earlier.getDate());
+    const utcLater = Date.UTC(later.getFullYear(), later.getMonth(), later.getDate());
+    return Math.round((utcLater - utcEarlier) / MS_PER_DAY);
   }
 
   createEntry(): void {

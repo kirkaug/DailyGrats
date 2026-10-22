@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SettingsService } from '../../services/settings.service';
 import { NotificationService } from '../../services/notification.service';
+import { JournalService } from '../../services/journal.service';
 import { AppSettings } from '../../models/journal-entry.model';
 
 @Component({
@@ -37,10 +38,14 @@ export class SettingsComponent implements OnInit {
   ];
 
   permissionGranted = false;
+  importExportMessage = '';
+  importExportError = false;
+  isProcessingData = false;
 
   constructor(
     private settingsService: SettingsService,
     private notificationService: NotificationService,
+    private journalService: JournalService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -111,6 +116,98 @@ export class SettingsComponent implements OnInit {
   async updateTheme(theme: 'light' | 'dark' | 'auto'): Promise<void> {
     this.settings.theme = theme;
     await this.saveSettings();
+  }
+
+  async exportEntries(): Promise<void> {
+    this.isProcessingData = true;
+    this.importExportMessage = '';
+    this.importExportError = false;
+    this.cdr.markForCheck();
+
+    try {
+      const entries = await this.journalService.getEntries();
+      const jsonData = await this.journalService.exportEntries();
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const dateStamp = new Date().toISOString().split('T')[0];
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dailygrats-entries-${dateStamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const count = entries.length;
+      this.importExportMessage = `Exported ${count} ${count === 1 ? 'entry' : 'entries'} successfully.`;
+    } catch (error: unknown) {
+      this.importExportError = true;
+      this.importExportMessage =
+        error instanceof Error ? error.message : 'Failed to export entries.';
+    } finally {
+      this.isProcessingData = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  triggerImport(fileInput: HTMLInputElement): void {
+    fileInput.value = '';
+    fileInput.click();
+  }
+
+  async onImportFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.isProcessingData = true;
+    this.importExportMessage = '';
+    this.importExportError = false;
+    this.cdr.markForCheck();
+
+    try {
+      const text = await file.text();
+      const result = await this.journalService.importEntries(text);
+      this.importExportMessage = `Import complete: ${result.added} added, ${result.updated} updated.`;
+    } catch (error: unknown) {
+      this.importExportError = true;
+      this.importExportMessage =
+        error instanceof Error ? error.message : 'Failed to import entries.';
+    } finally {
+      this.isProcessingData = false;
+      input.value = '';
+      this.cdr.markForCheck();
+    }
+  }
+
+  async clearData(): Promise<void> {
+    if (
+      !confirm(
+        'Are you sure you want to delete all gratitude entries? This action cannot be undone.'
+      )
+    ) {
+      return;
+    }
+
+    this.isProcessingData = true;
+    this.importExportMessage = '';
+    this.importExportError = false;
+    this.cdr.markForCheck();
+
+    try {
+      const removedCount = await this.journalService.clearEntries();
+      this.importExportMessage = `Cleared ${removedCount} ${removedCount === 1 ? 'entry' : 'entries'}.`;
+    } catch (error: unknown) {
+      this.importExportError = true;
+      this.importExportMessage =
+        error instanceof Error ? error.message : 'Failed to clear entries.';
+    } finally {
+      this.isProcessingData = false;
+      this.cdr.markForCheck();
+    }
   }
 
   private async saveSettings(): Promise<void> {

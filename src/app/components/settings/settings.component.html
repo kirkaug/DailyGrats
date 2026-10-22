@@ -146,6 +146,71 @@
       </div>
     </section>
 
+    <section class="settings-section">
+      <h2>Data Management</h2>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Export Entries</div>
+          <div class="setting-description">Download all your entries, photos, and AI reflections as a JSON backup</div>
+        </div>
+        <button
+          type="button"
+          class="action-btn export-btn"
+          [disabled]="isProcessingData"
+          (click)="exportEntries()"
+        >
+          Export
+        </button>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Import Entries</div>
+          <div class="setting-description">Merge entries from a JSON backup (updates matching IDs, adds new ones)</div>
+        </div>
+        <input
+          #importFileInput
+          type="file"
+          accept=".json,application/json"
+          (change)="onImportFileSelected($event)"
+          hidden
+        />
+        <button
+          type="button"
+          class="action-btn import-btn"
+          [disabled]="isProcessingData"
+          (click)="triggerImport(importFileInput)"
+        >
+          Import
+        </button>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">Clear Data</div>
+          <div class="setting-description">Permanently delete all gratitude entries from this device</div>
+        </div>
+        <button
+          type="button"
+          class="action-btn danger-btn"
+          [disabled]="isProcessingData"
+          (click)="clearData()"
+        >
+          Clear All
+        </button>
+      </div>
+
+      <div
+        *ngIf="importExportMessage"
+        class="data-status-message"
+        [class.error]="importExportError"
+        role="status"
+      >
+        {{ importExportMessage }}
+      </div>
+    </section>
+
     <section class="settings-section app-info">
       <h2>About</h2>
       <img src="icon.svg" alt="DailyGrats logo" class="about-logo" />
