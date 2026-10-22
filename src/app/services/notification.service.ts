@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { SettingsService } from './settings.service';
 
@@ -11,6 +12,11 @@ export class NotificationService {
   constructor(private settingsService: SettingsService) {}
 
   async initialize(): Promise<void> {
+    const settings = await this.settingsService.getSettings();
+    if (!settings.notifications.enabled) {
+      return;
+    }
+
     // Request permission
     const permission = await LocalNotifications.requestPermissions();
     if (permission.display === 'granted') {
@@ -29,6 +35,8 @@ export class NotificationService {
     }
 
     const [hours, minutes] = settings.notifications.time.split(':').map(Number);
+    const isNative = Capacitor.isNativePlatform();
+    const now = new Date();
 
     // Schedule notifications for each enabled day
     const notifications = settings.notifications.days.map((day, index) => {
@@ -39,21 +47,38 @@ export class NotificationService {
         id: this.NOTIFICATION_ID + index,
         title: 'Daily Gratitude Reminder',
         body: 'Take a moment to reflect on what you\'re grateful for today.',
-        schedule: {
-          on: {
-            weekday: weekday,
-            hour: hours,
-            minute: minutes,
-          },
-          repeats: true,
-          allowWhileIdle: true,
-        },
+        schedule: isNative
+          ? {
+              on: {
+                weekday: weekday,
+                hour: hours,
+                minute: minutes,
+              },
+              repeats: true,
+              allowWhileIdle: true,
+            }
+          : {
+              at: this.getNextNotificationDate(day, hours, minutes, now),
+            },
       };
     });
 
     if (notifications.length > 0) {
       await LocalNotifications.schedule({ notifications });
     }
+  }
+
+  getNextNotificationDate(day: number, hours: number, minutes: number, now: Date = new Date()): Date {
+    const next = new Date(now);
+    next.setHours(hours, minutes, 0, 0);
+
+    let daysUntil = (day - now.getDay() + 7) % 7;
+    if (daysUntil === 0 && next.getTime() <= now.getTime()) {
+      daysUntil = 7;
+    }
+
+    next.setDate(next.getDate() + daysUntil);
+    return next;
   }
 
   async cancelNotifications(): Promise<void> {
