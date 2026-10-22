@@ -1,10 +1,25 @@
 <div class="entry-list-container">
   <header class="app-header">
-    <h1>DailyGrats</h1>
-    <button class="settings-btn" routerLink="/settings">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div class="app-brand">
+      <img src="icon.svg" alt="DailyGrats logo" class="app-logo" />
+      <h1>DailyGrats</h1>
+    </div>
+    <button class="settings-btn" routerLink="/settings" aria-label="Settings" title="Settings">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <circle cx="12" cy="12" r="3"></circle>
-        <path d="M12 1v6m0 6v6m5.2-13.2l-1.4 1.4M8.2 15.8l-1.4 1.4M23 12h-6m-6 0H5m13.2 5.2l-1.4-1.4M8.2 8.2L6.8 6.8"></path>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+        ></path>
       </svg>
     </button>
   </header>
@@ -12,7 +27,9 @@
   <div *ngIf="loading" class="loading">Loading...</div>
 
   <div *ngIf="!loading && entries.length === 0" class="empty-state">
-    <div class="empty-icon">📝</div>
+    <div class="empty-icon">
+      <img src="icon.svg" alt="DailyGrats icon" class="empty-logo" />
+    </div>
     <h2>Start Your Gratitude Journey</h2>
     <p>Begin by writing your first entry. Take a moment to reflect on what you're grateful for today.</p>
   </div>
@@ -38,7 +55,7 @@
     </div>
   </div>
 
-  <button class="fab" (click)="createEntry()">
+  <button class="fab" (click)="createEntry()" aria-label="New Gratitude Entry" title="New Entry">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <line x1="12" y1="5" x2="12" y2="19"></line>
       <line x1="5" y1="12" x2="19" y2="12"></line>
