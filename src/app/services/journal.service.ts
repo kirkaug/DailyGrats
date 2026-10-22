@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { JournalEntry } from '../models/journal-entry.model';
 import { StorageService } from './storage.service';
+import { PhotoService } from './photo.service';
 
 const ENTRY_KEY_PREFIX = 'entry_';
+const MAX_UNCOMPRESSED_PHOTO_LENGTH = 300_000;
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +15,10 @@ export class JournalService {
   public entries$: Observable<JournalEntry[]> = this.entriesSubject.asObservable();
   private initializedPromise: Promise<void>;
 
-  constructor(private storageService: StorageService) {
+  constructor(
+    private storageService: StorageService,
+    private photoService?: PhotoService
+  ) {
     this.initializedPromise = this.loadEntries();
   }
 
@@ -27,9 +32,18 @@ export class JournalService {
     for (const key of entryKeys) {
       const entry = await this.storageService.get<JournalEntry>(key);
       if (entry) {
+        let photoUrl = entry.photoUrl;
+        if (photoUrl && photoUrl.length > MAX_UNCOMPRESSED_PHOTO_LENGTH && this.photoService) {
+          const originalLength = photoUrl.length;
+          photoUrl = await this.photoService.compressImage(photoUrl);
+          if (photoUrl.length < originalLength) {
+            await this.storageService.set(key, { ...entry, photoUrl });
+          }
+        }
         // Convert date strings back to Date objects
         const parsedEntry = {
           ...entry,
+          photoUrl,
           date: new Date(entry.date),
           createdAt: new Date(entry.createdAt),
           updatedAt: new Date(entry.updatedAt)
@@ -60,12 +74,13 @@ export class JournalService {
 
   async createEntry(content: string, photoUrl?: string, aiReflection?: string): Promise<JournalEntry> {
     await this.initializedPromise;
+    const normalizedPhoto = await this.normalizePhoto(photoUrl);
     const now = new Date();
     const entry: JournalEntry = {
       id: this.generateId(),
       date: now,
       content,
-      photoUrl,
+      photoUrl: normalizedPhoto,
       aiReflection,
       createdAt: now,
       updatedAt: now
@@ -89,9 +104,15 @@ export class JournalService {
       return null;
     }
 
+    const normalizedPhoto =
+      updates.photoUrl !== undefined
+        ? await this.normalizePhoto(updates.photoUrl)
+        : await this.normalizePhoto(entries[index].photoUrl);
+
     const updatedEntry = {
       ...entries[index],
       ...updates,
+      photoUrl: normalizedPhoto,
       updatedAt: new Date()
     };
 
@@ -118,6 +139,16 @@ export class JournalService {
 
   async addAiReflection(id: string, reflection: string): Promise<JournalEntry | null> {
     return this.updateEntry(id, { aiReflection: reflection });
+  }
+
+  private async normalizePhoto(photoUrl?: string): Promise<string | undefined> {
+    if (!photoUrl) {
+      return photoUrl;
+    }
+    if (photoUrl.length > MAX_UNCOMPRESSED_PHOTO_LENGTH && this.photoService) {
+      return this.photoService.compressImage(photoUrl);
+    }
+    return photoUrl;
   }
 
   private generateId(): string {

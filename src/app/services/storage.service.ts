@@ -17,12 +17,28 @@ export class StorageService {
   }
 
   async set(key: string, value: any): Promise<void> {
+    const serialized = JSON.stringify(value);
     try {
       await Preferences.set({
         key,
-        value: JSON.stringify(value)
+        value: serialized
       });
-    } catch (error) {
+    } catch (error: any) {
+      // If updating an existing key hit localStorage quota because old+new briefly coexist,
+      // remove the old value first and retry.
+      if (error?.name === 'QuotaExceededError' || String(error).includes('QuotaExceededError')) {
+        try {
+          await Preferences.remove({ key });
+          await Preferences.set({
+            key,
+            value: serialized
+          });
+          return;
+        } catch (retryError) {
+          console.error('Error setting to storage after retry:', retryError);
+          throw retryError;
+        }
+      }
       console.error('Error setting to storage:', error);
       throw error;
     }
