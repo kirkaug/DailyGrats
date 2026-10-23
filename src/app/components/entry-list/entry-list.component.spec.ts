@@ -167,4 +167,24 @@ describe('EntryListComponent time increment filtering', () => {
     firstCard.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(navigatedTo).toEqual(['/entry', 'today']);
   });
+
+  it('displays full entry content without truncating longer entries and renders photo inline', () => {
+    const longContent = 'A'.repeat(250);
+    entriesSubject.next([
+      {
+        ...makeEntry('long-with-photo', new Date(2026, 9, 22, 9, 0, 0), longContent),
+        photoUrl: 'data:image/png;base64,fakeimage'
+      }
+    ]);
+
+    const fixture = TestBed.createComponent(EntryListComponent);
+    fixture.detectChanges();
+
+    const contentParagraph = fixture.nativeElement.querySelector('.entry-content p') as HTMLElement;
+    expect(contentParagraph.textContent).toBe(longContent);
+
+    const inlineImg = fixture.nativeElement.querySelector('.entry-photo img') as HTMLImageElement;
+    expect(inlineImg).toBeTruthy();
+    expect(inlineImg.getAttribute('src')).toBe('data:image/png;base64,fakeimage');
+  });
 });

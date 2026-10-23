@@ -197,19 +197,29 @@
     margin: 0;
     line-height: 1.6;
     color: var(--text-primary);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 
-  .entry-has-photo,
+  .entry-photo {
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+  }
+
   .entry-has-reflection {
     position: absolute;
     bottom: 16px;
     right: 16px;
     color: var(--accent-color);
     opacity: 0.6;
-  }
-
-  .entry-has-reflection {
-    right: 44px;
   }
 }
 

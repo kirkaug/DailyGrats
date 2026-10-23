@@ -200,8 +200,4 @@ export class EntryListComponent implements OnInit, OnDestroy {
            date1.getMonth() === date2.getMonth() &&
            date1.getDate() === date2.getDate();
   }
-
-  getPreview(content: string): string {
-    return content.length > 150 ? content.substring(0, 150) + '...' : content;
-  }
 }
